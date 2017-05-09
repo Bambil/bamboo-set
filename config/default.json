@@ -1,0 +1,11 @@
+{
+  "mqtt": {
+    "ip": "192.168.73.6"
+  },
+  "cluster": {
+    "name": "parham-home",
+    "consul": {
+      "host": "127.0.0.1"
+    }
+  }
+}
