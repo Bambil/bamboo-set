@@ -1,6 +1,7 @@
 'use strict';
 
 const schema = require('./request-schema.json');
+const winston = require('winston');
 const ajv = require('ajv')();
 
 const validate = ajv.compile(schema);
@@ -14,5 +15,10 @@ module.exports = function configuration() {
 
     this.act({role: 'connectivity', action: 'send', data: msg.data,
              channel: 'configuration/request'}, respond);
+  });
+
+  this.add({role: 'configuration', action: 'change'}, (msg, respond) => {
+    winston.info(msg.data);
+    respond();
   });
 };
