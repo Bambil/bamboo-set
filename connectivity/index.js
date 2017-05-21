@@ -12,7 +12,7 @@ const mqttClient  = mqtt.connect(`mqtt://${config.get('mqtt.ip')}`);
 mqttClient.on('connect',() => {
   winston.info(` * MQTT at ${config.get('mqtt.ip')}`);
   mqttClient.subscribe(
-    `I1820/${config.get('cluster.name')}/configuration/chnage`);
+    `I1820/${config.get('cluster.name')}/configuration/change`);
 });
 
 module.exports = function connectivity() {
