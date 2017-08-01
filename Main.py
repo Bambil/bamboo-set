@@ -56,7 +56,7 @@ client.loop_start()    #start the loop when we should finish it ?
 client.subscribe("set")
 
 
-app = Flask(name)
+app = Flask(__name__)
 @app.route('/', methods=['PUT'])
 def getMessage():
     if request.headers['Content-Type'] == 'application/json':
@@ -72,6 +72,6 @@ def getMessage():
         publishTime = time.time()
 
 
-if name == "main":
+if __name__ == "main":
     app.run(host='0.0.0.0')
 
