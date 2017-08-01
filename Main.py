@@ -6,22 +6,25 @@ import time
 import json
 import paho.mqtt.client as mqtt
 from flask import Flask,request
+import requests
 from pymongo import MongoClient
+import  os
 
 
 publishTime = 0
 requestId = -1
 
 client = mqtt.Client("C1")#create a client
-broker_address="" #use external broker
+broker_address="127.0.0.1.9994" #use external broker
 client.connect(broker_address) #connect to broker
 
 mongoclient = MongoClient()
-db = mongoclient.database
+db = mongoclient.mayDatabase
 
 def on_message(client, userdata, message):
     print ("message received " + str(message.payload))
     print("topic " + str(message.topic))
+    UIip = os.environ['UI_ip']
 
     receivedMessage = json.dumps(message.payload)
     finalReceivedMessage = json.loads(receivedMessage)
@@ -32,11 +35,17 @@ def on_message(client, userdata, message):
 
     if timeout > 0.010 or finalReceivedMessage['id'] != requestId:
         print('no response')
+        requests.post('http://' + UIip + ':3000', finalReceivedMessage)
+
         # no response
         #json format of next layer   :  json request + is done : true / false
 
     else :
         print('is Done')
+        r = requests.post('http://' + UIip + ':3000',finalReceivedMessage )
+
+        result = db.agent.insertOne(finalReceivedMessage)
+
         # response is Done
 
 
@@ -56,7 +65,8 @@ client.loop_start()    #start the loop when we should finish it ?
 client.subscribe("set")
 
 
-app = Flask(name)
+app = Flask(__name__)
+
 @app.route('/', methods=['PUT'])
 def getMessage():
     if request.headers['Content-Type'] == 'application/json':
@@ -72,6 +82,5 @@ def getMessage():
         publishTime = time.time()
 
 
-if name == "main":
+if __name__ == "main":
     app.run(host='0.0.0.0')
-
