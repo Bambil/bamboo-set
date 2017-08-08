@@ -5,82 +5,93 @@
 import time
 import json
 import paho.mqtt.client as mqtt
-from flask import Flask,request
-import requests
+from flask import Flask, request
 from pymongo import MongoClient
-import  os
+import  yaml
 
 
 publishTime = 0
 requestId = -1
-
-client = mqtt.Client("C1")#create a client
-broker_address="127.0.0.1.9994" #use external broker
-client.connect(broker_address) #connect to broker
-
-mongoclient = MongoClient()
-db = mongoclient.mayDatabase
-
-def on_message(client, userdata, message):
-    print ("message received " + str(message.payload))
-    print("topic " + str(message.topic))
-    UIip = os.environ['UI_ip']
-
-    receivedMessage = json.dumps(message.payload)
-    finalReceivedMessage = json.loads(receivedMessage)
-
-
-    responseTime = time.time()
-    timeout = publishTime - responseTime
-
-    if timeout > 0.010 or finalReceivedMessage['id'] != requestId:
-        print('no response')
-        requests.post('http://' + UIip + ':3000', finalReceivedMessage)
-
-        # no response
-        #json format of next layer   :  json request + is done : true / false
-
-    else :
-        print('is Done')
-        r = requests.post('http://' + UIip + ':3000',finalReceivedMessage )
-
-        result = db.agent.insertOne(finalReceivedMessage)
-
-        # response is Done
-
-
-    #we dont know what we get in this message :D
-
-def on_log(client, userdata, level, buf):
-    print("log: ",buf)
-
-
-
-client.on_message=on_message        #attach function to callback
-client.on_log = on_log
-
-
-client.loop_start()    #start the loop when we should finish it ?
-
-client.subscribe("set")
+answered = False
+answerJson = ""
 
 
 app = Flask(__name__)
 
-@app.route('/', methods=['PUT'])
-def getMessage():
-    if request.headers['Content-Type'] == 'application/json':
-        jsonfile =  request.json()
-        newjson = json.dumps(jsonfile)
-        finaljson = json.loads(newjson)
 
+@app.route('/', methods=['PUT'])
+def getMessageChange():
+    if request.headers['content-type'] == 'application/json':
+        jsonfile = request.get_json()
+        newjson = json.dumps(jsonfile)
+        print newjson
+        finaljson = json.loads(newjson)
         global requestId
         requestId = requestId + 1
         finaljson['id'] = requestId
-        client.publish("set",finaljson)
-        global publishTime
-        publishTime = time.time()
+        client.publish("set", finaljson)
 
+       # client.publish("set", "{'isdone' : True}")
 
-if __name__ == "main":
+        ## return next layer answer
+
+        time.sleep(0.01)  # wait 10 ms
+        global answered
+        global answerJson
+        if answered == True and requestId == answerJson['id']:
+            db.agent.update_one(
+                {"agent_id": answerJson['agent_id'],
+                 "device_id": answerJson['device_id']},
+                {
+                    "$set": answerJson
+                }
+            )
+            if answerJson['is_done'] == True:
+                answered = False
+                return "is done"
+            else:
+                answered = False
+                return "no response"
+        else:#more than ten ms
+
+            answered = False
+            return "no response"
+
+@app.route('/', methods=['POST'])
+def getMessageRead():
+    return  db.agent.find(request.json())
+
+if __name__ == "__main__":
     app.run(host='0.0.0.0')
+
+
+
+client = mqtt.Client("C1")  # create a client
+broker_address = "127.0.0.1:9994"  # use external broker
+client.connect(broker_address)  # connect to broker
+
+mongoclient = MongoClient()
+db = mongoclient.mayDatabase
+
+
+def on_message(client, userdata, message):
+    answered = True  # if next layer answer to us
+    print ("message received " + str(message.payload))
+    print("topic " + str(message.topic))
+    # json format of next layer   :  json request + is_sdone : true / false
+
+    receivedMessage = json.dumps(message.payload)
+    finalReceivedMessage = json.loads(receivedMessage)
+
+    answerJson = finalReceivedMessage  # answer of next layer
+
+def on_log(client, userdata, level, buf):
+    print("log: ", buf)
+
+
+client.on_message = on_message  # attach function to callback
+client.on_log = on_log
+
+client.loop_start()  # start the loop when we should finish it ?
+
+client.subscribe("set")
