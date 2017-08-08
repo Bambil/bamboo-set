@@ -7,17 +7,49 @@ import json
 import paho.mqtt.client as mqtt
 from flask import Flask, request
 from pymongo import MongoClient
+import yaml_1 as yaml
+
+#with open("example.yaml", 'r') as stream:
+#    try:
+#        print(yaml.load(stream))
+#    except yaml.YAMLError as exc:
+#        print(exc)
 
 
-
-publishTime = 0
+#publishTime = 0
 requestId = -1
 answered = False
 answerJson = ""
 
+client = mqtt.Client("C1")  # create a client
+broker_address = "127.0.0.1:9994"  # use external broker
+client.connect(broker_address)  # connect to broker
+
+mongoclient = MongoClient()
+db = mongoclient.mayDatabase
+
+
+def on_message(client, userdata, message):
+    answered = True  # if next layer answer to us
+    print ("message received " + str(message.payload))
+    print("topic " + str(message.topic))
+    # json format of next layer   :  json request + is_sdone : true / false
+
+    receivedMessage = json.dumps(message.payload)
+    finalReceivedMessage = json.loads(receivedMessage)
+
+    answerJson = finalReceivedMessage  # answer of next layer
+
+def on_log(client, userdata, level, buf):
+    print("log: ", buf)
+
+
+client.on_message = on_message  # attach function to callback
+client.on_log = on_log
+client.loop_start()  # start the loop when we should finish it ?
+client.subscribe("set")
 
 app = Flask(__name__)
-
 
 @app.route('/', methods=['PUT'])
 def getMessageChange():
@@ -63,34 +95,3 @@ def getMessageRead():
 if __name__ == "__main__":
     app.run(host='0.0.0.0')
 
-
-
-client = mqtt.Client("C1")  # create a client
-broker_address = "127.0.0.1:9994"  # use external broker
-client.connect(broker_address)  # connect to broker
-
-mongoclient = MongoClient()
-db = mongoclient.mayDatabase
-
-
-def on_message(client, userdata, message):
-    answered = True  # if next layer answer to us
-    print ("message received " + str(message.payload))
-    print("topic " + str(message.topic))
-    # json format of next layer   :  json request + is_sdone : true / false
-
-    receivedMessage = json.dumps(message.payload)
-    finalReceivedMessage = json.loads(receivedMessage)
-
-    answerJson = finalReceivedMessage  # answer of next layer
-
-def on_log(client, userdata, level, buf):
-    print("log: ", buf)
-
-
-client.on_message = on_message  # attach function to callback
-client.on_log = on_log
-
-client.loop_start()  # start the loop when we should finish it ?
-
-client.subscribe("set")
