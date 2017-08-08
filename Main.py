@@ -7,7 +7,7 @@ import json
 import paho.mqtt.client as mqtt
 from flask import Flask, request
 from pymongo import MongoClient
-import  yaml
+
 
 
 publishTime = 0
@@ -24,7 +24,6 @@ def getMessageChange():
     if request.headers['content-type'] == 'application/json':
         jsonfile = request.get_json()
         newjson = json.dumps(jsonfile)
-        print newjson
         finaljson = json.loads(newjson)
         global requestId
         requestId = requestId + 1
