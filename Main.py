@@ -1,3 +1,8 @@
+##
+# Documentation for this module
+#
+# Set component of an IOT Platform
+
 # In The Name Of God
 # Creation Date : 7/25/17
 # Created By : maryam ebrahimzadeh(maryam.ebrahimzadeh1997@yahoo.com)
@@ -16,41 +21,63 @@ import yaml_1 as yaml
 #        print(exc)
 
 
-#publishTime = 0
+#Global variables
 requestId = -1
 answered = False
 answerJson = ""
 
+#Determine MQTT client
 client = mqtt.Client("C1")  # create a client
 broker_address = "127.0.0.1:9994"  # use external broker
 client.connect(broker_address)  # connect to broker
 
+#Determine mongoclient
 mongoclient = MongoClient()
 db = mongoclient.mayDatabase
 
-
+##documentation for a method
+#
+# @Param client mqtt client
+# @Param userdata default argument
+# @Param message the message which is received
+#
+#this method is for get the json which is sent by agent layer in MQTT
 def on_message(client, userdata, message):
-    answered = True  # if next layer answer to us
+    answered = True  # if agent  layer answer to us
     print ("message received " + str(message.payload))
     print("topic " + str(message.topic))
-    # json format of next layer   :  json request + is_sdone : true / false
 
     receivedMessage = json.dumps(message.payload)
     finalReceivedMessage = json.loads(receivedMessage)
 
     answerJson = finalReceivedMessage  # answer of next layer
 
+##documentation for a method
+#
+# @Param client mqtt client
+# @Param userdata default argument
+# @Param level default argument
+# @Param buf is our systems log
+#
+#this method is for print our log
 def on_log(client, userdata, level, buf):
     print("log: ", buf)
 
 
 client.on_message = on_message  # attach function to callback
-client.on_log = on_log
+client.on_log = on_log # attach function to callback
 client.loop_start()  # start the loop when we should finish it ?
-client.subscribe("set")
+client.subscribe("set") #subscribe on channel
 
 app = Flask(__name__)
 
+##documentation for a method
+#
+#this method is used for getting a http PUT  request from UI layer
+#and publish it to set channel
+#and sleep for 10ms
+#then if we get the answer send proper text answer
+#else return no response
 @app.route('/', methods=['PUT'])
 def getMessageChange():
     if request.headers['content-type'] == 'application/json':
@@ -61,10 +88,6 @@ def getMessageChange():
         requestId = requestId + 1
         finaljson['id'] = requestId
         client.publish("set", finaljson)
-
-       # client.publish("set", "{'isdone' : True}")
-
-        ## return next layer answer
 
         time.sleep(0.01)  # wait 10 ms
         global answered
@@ -87,6 +110,11 @@ def getMessageChange():
 
             answered = False
             return "no response"
+##documentation for a method
+#
+#this method is used for getting a http POST request from UI layer
+#  for reading from our database
+
 
 @app.route('/', methods=['POST'])
 def getMessageRead():
@@ -94,4 +122,3 @@ def getMessageRead():
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0')
-
