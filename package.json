@@ -17,6 +17,7 @@
   },
   "homepage": "https://github.com/bambil/bamboo-set#readme",
   "dependencies": {
+    "@ibamboo/component": "^1.7.0",
     "config": "^1.26.2",
     "winston": "^2.3.1"
   },
